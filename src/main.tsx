@@ -1,10 +1,30 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import { RegExpMatcher, englishDataset, englishRecommendedTransformers } from "obscenity";
 import "./styles.css";
 import forMaskUrl from "./assets/for-mask.png";
 import markMaskUrl from "./assets/mark-mask.png";
+import antonWoff2Url from "./assets/Anton-Regular.woff2";
 
 const FONT_STACK = 'Anton, "Arial Narrow", sans-serif';
+
+// Word-boundary aware (won't flag "Scunthorpe"-style false positives) and normalizes
+// common evasion tricks (leetspeak, spacing) before matching against the maintained
+// English profanity dataset.
+const profanityMatcher = new RegExpMatcher({
+  ...englishDataset.build(),
+  ...englishRecommendedTransformers
+});
+
+/**
+ * obscenity's recommended preset deliberately skips a "strip non-alphabetic characters"
+ * transformer (it caused false positives elsewhere in the library), which leaves a gap:
+ * spacing/punctuation evasion like "f u c k" or "f.u.c.k" isn't caught by the primary
+ * pass. Re-checking a squashed-together copy of the text closes that gap.
+ */
+function containsProfanity(text: string): boolean {
+  return profanityMatcher.hasMatch(text) || profanityMatcher.hasMatch(text.replace(/[^a-zA-Z]/g, ""));
+}
 
 type Scheme = {
   id: string;
@@ -244,13 +264,28 @@ function SignGenerator() {
 
   const scheme = SCHEMES.find((s) => s.id === schemeId) ?? SCHEMES[0];
   const format = FORMATS.find((f) => f.id === formatId) ?? FORMATS[0];
+  // Checked against the typed text, not what gets drawn — so nothing gets rendered to
+  // canvas (and therefore nothing screenshot-able) even before the Download button
+  // would have blocked it.
+  const hasProfanity = React.useMemo(() => containsProfanity(groupName), [groupName]);
+  const safeGroupName = hasProfanity ? "" : groupName;
 
   React.useEffect(() => {
+    // Loaded via the FontFace API directly from our own bundled file, rather than
+    // document.fonts.load() against a <link>-tag @font-face: that approach raced the
+    // external stylesheet's own network fetch and could resolve before the family was
+    // actually registered, so the first render (until a refresh re-ran it against a
+    // now-cached stylesheet) silently fell back to a system font.
     let cancelled = false;
-    document.fonts
-      .load(`400 100px ${FONT_STACK}`)
-      .catch(() => undefined)
-      .finally(() => {
+    const face = new FontFace("Anton", `url(${antonWoff2Url})`, { weight: "400" });
+    face
+      .load()
+      .then((loaded) => {
+        if (cancelled) return;
+        document.fonts.add(loaded);
+        setFontsReady(true);
+      })
+      .catch(() => {
         if (!cancelled) setFontsReady(true);
       });
     return () => {
@@ -273,13 +308,14 @@ function SignGenerator() {
   React.useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    drawSign(canvas, format, scheme, groupName, marksRef.current);
-  }, [format, scheme, groupName, fontsReady, marksReady]);
+    drawSign(canvas, format, scheme, safeGroupName, marksRef.current);
+  }, [format, scheme, safeGroupName, fontsReady, marksReady]);
 
   const downloadPng = React.useCallback(() => {
+    if (hasProfanity) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const slug = (groupName.trim() || "your-group").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    const slug = (safeGroupName.trim() || "your-group").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
     canvas.toBlob((blob) => {
       if (!blob) return;
       const url = URL.createObjectURL(blob);
@@ -291,7 +327,7 @@ function SignGenerator() {
       link.remove();
       URL.revokeObjectURL(url);
     }, "image/png");
-  }, [groupName]);
+  }, [safeGroupName, hasProfanity]);
 
   return (
     <div className="generatorApp">
@@ -315,7 +351,14 @@ function SignGenerator() {
               placeholder="e.g. Van Buren County"
               maxLength={60}
               autoFocus
+              aria-invalid={hasProfanity}
+              className={hasProfanity ? "invalid" : undefined}
             />
+            {hasProfanity && (
+              <span className="fieldError" role="alert">
+                Please choose an appropriate group name.
+              </span>
+            )}
           </label>
 
           <fieldset className="field">
@@ -356,7 +399,7 @@ function SignGenerator() {
             </div>
           </fieldset>
 
-          <button type="button" className="downloadButton" onClick={downloadPng}>
+          <button type="button" className="downloadButton" onClick={downloadPng} disabled={hasProfanity}>
             Download PNG
           </button>
         </section>

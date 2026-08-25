@@ -115,6 +115,16 @@ body {
   outline-offset: 1px;
 }
 
+.field input.invalid {
+  border-color: var(--red);
+}
+
+.fieldError {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--red);
+}
+
 .swatchRow {
   display: flex;
   gap: 10px;
@@ -189,6 +199,11 @@ body {
 
 .downloadButton:hover {
   filter: brightness(1.05);
+}
+
+.downloadButton:disabled {
+  background: #c9c4b8;
+  cursor: not-allowed;
 }
 
 .previewPane {
