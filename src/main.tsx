@@ -4,9 +4,12 @@ import { RegExpMatcher, englishDataset, englishRecommendedTransformers } from "o
 import "./styles.css";
 import forMaskUrl from "./assets/for-mask.png";
 import markMaskUrl from "./assets/mark-mask.png";
-import antonWoff2Url from "./assets/Anton-Regular.woff2";
 
-const FONT_STACK = 'Anton, "Arial Narrow", sans-serif';
+// Served via the campaign's licensed Adobe Fonts kit (see the <link> in index.html) —
+// not self-hosted, since Adobe's webfont license requires using their embed mechanism.
+const FONT_STACK = '"kensington", "Arial Narrow", sans-serif';
+const FONT_WEIGHT = "700";
+const ADOBE_FONTS_LINK_ID = "adobe-fonts-link";
 
 // Word-boundary aware (won't flag "Scunthorpe"-style false positives) and normalizes
 // common evasion tricks (leetspeak, spacing) before matching against the maintained
@@ -68,7 +71,7 @@ function fitFontSize(
   let best = minSize;
   while (lo <= hi) {
     const mid = Math.floor((lo + hi) / 2);
-    ctx.font = `400 ${mid}px ${FONT_STACK}`;
+    ctx.font = `${FONT_WEIGHT} ${mid}px ${FONT_STACK}`;
     if (ctx.measureText(text).width <= maxWidth) {
       best = mid;
       lo = mid + 1;
@@ -82,7 +85,7 @@ function fitFontSize(
 function bestTwoLineSplit(ctx: CanvasRenderingContext2D, words: string[]): [string, string] {
   let best: [string, string] = [words[0], words.slice(1).join(" ")];
   let bestWorstWidth = Infinity;
-  ctx.font = `400 100px ${FONT_STACK}`;
+  ctx.font = `${FONT_WEIGHT} 100px ${FONT_STACK}`;
   for (let split = 1; split < words.length; split++) {
     const line1 = words.slice(0, split).join(" ");
     const line2 = words.slice(split).join(" ");
@@ -96,13 +99,14 @@ function bestTwoLineSplit(ctx: CanvasRenderingContext2D, words: string[]): [stri
 }
 
 /**
- * Anton's cap-height as a fraction of its em size — measured directly (rendered "ABDUL"
- * at 400px, scanned the actual ink bounds: cap-top sat 347px above the baseline). Every
- * word here is set in caps with no descenders, so this converts between "font size" and
- * the real glyph height used for stacking/centering math below. Getting this wrong is
- * what causes text to overshoot its intended box and crowd the row below it.
+ * Kensington Bold's cap-height as a fraction of its em size — measured directly (rendered
+ * "ABDUL"/"LATINOS"/"O"/"S" at 400px via the licensed Adobe Fonts kit, scanned the actual
+ * ink bounds: cap-top sat ~302px above the baseline). Every word here is set in caps with
+ * no descenders, so this converts between "font size" and the real glyph height used for
+ * stacking/centering math below. Getting this wrong is what causes text to overshoot its
+ * intended box and crowd the row below it.
  */
-const CAP_RATIO = 0.868;
+const CAP_RATIO = 0.755;
 
 /** Fits the group name as one line or a balanced two-line wrap, whichever renders bigger. */
 function fitGroupName(
@@ -195,7 +199,7 @@ function drawSign(
   // --- Group name (accent color), 1 or 2 lines, tight leading. ---
   const groupBudgetHeight = height * 0.3;
   const { lines, fontSize: groupFontSize } = fitGroupName(ctx, groupName, maxTextWidth, groupBudgetHeight);
-  ctx.font = `400 ${groupFontSize}px ${FONT_STACK}`;
+  ctx.font = `${FONT_WEIGHT} ${groupFontSize}px ${FONT_STACK}`;
   const lineWidths = lines.map((line) => ctx.measureText(line).width);
   const groupCapHeight = groupFontSize * CAP_RATIO;
   const linePitch = groupFontSize * 0.86; // tight, near-touching leading, matching the source art
@@ -218,7 +222,7 @@ function drawSign(
   const assetHeight = abdulCapHeight * MARK_HEIGHT_RATIO;
   const assetWidth = assetHeight * MARK_ASPECT;
   columnWidth = assetWidth;
-  ctx.font = `400 ${abdulFontSize}px ${FONT_STACK}`;
+  ctx.font = `${FONT_WEIGHT} ${abdulFontSize}px ${FONT_STACK}`;
   const abdulWidth = ctx.measureText("ABDUL").width;
   const rowWidth = columnWidth + columnGap + abdulWidth;
   const rowHeight = abdulCapHeight;
@@ -231,7 +235,7 @@ function drawSign(
   const blockTop = (height - blockHeight) / 2;
 
   ctx.fillStyle = scheme.accent;
-  ctx.font = `400 ${groupFontSize}px ${FONT_STACK}`;
+  ctx.font = `${FONT_WEIGHT} ${groupFontSize}px ${FONT_STACK}`;
   lines.forEach((line, i) => {
     const baseline = blockTop + groupCapHeight + i * linePitch;
     ctx.fillText(line, blockLeft, baseline);
@@ -249,7 +253,7 @@ function drawSign(
   }
 
   ctx.fillStyle = scheme.text;
-  ctx.font = `400 ${abdulFontSize}px ${FONT_STACK}`;
+  ctx.font = `${FONT_WEIGHT} ${abdulFontSize}px ${FONT_STACK}`;
   ctx.fillText("ABDUL", blockLeft + columnWidth + columnGap, rowBaseline);
 }
 
@@ -271,23 +275,32 @@ function SignGenerator() {
   const safeGroupName = hasProfanity ? "" : groupName;
 
   React.useEffect(() => {
-    // Loaded via the FontFace API directly from our own bundled file, rather than
-    // document.fonts.load() against a <link>-tag @font-face: that approach raced the
-    // external stylesheet's own network fetch and could resolve before the family was
-    // actually registered, so the first render (until a refresh re-ran it against a
-    // now-cached stylesheet) silently fell back to a system font.
+    // Adobe's webfont license requires using their embed <link> as provided (see
+    // index.html) rather than self-hosting the files, so unlike Anton this can't be
+    // loaded via the FontFace API against a bundled file. The original refresh-needed
+    // bug came from calling document.fonts.load() before the stylesheet had actually
+    // registered its @font-face rules yet — fixed here by explicitly waiting for the
+    // <link> element's own load event first, THEN asking the Font Loading API to load
+    // the specific weight, in that order.
     let cancelled = false;
-    const face = new FontFace("Anton", `url(${antonWoff2Url})`, { weight: "400" });
-    face
-      .load()
-      .then((loaded) => {
-        if (cancelled) return;
-        document.fonts.add(loaded);
-        setFontsReady(true);
-      })
-      .catch(() => {
-        if (!cancelled) setFontsReady(true);
-      });
+    const linkEl = document.getElementById(ADOBE_FONTS_LINK_ID) as HTMLLinkElement | null;
+
+    async function ready() {
+      if (linkEl && !linkEl.sheet) {
+        await new Promise<void>((resolve) => {
+          linkEl.addEventListener("load", () => resolve(), { once: true });
+          linkEl.addEventListener("error", () => resolve(), { once: true });
+        });
+      }
+      try {
+        await document.fonts.load(`${FONT_WEIGHT} 100px ${FONT_STACK}`);
+      } catch {
+        // fall through to the CSS fallback stack
+      }
+      if (!cancelled) setFontsReady(true);
+    }
+
+    void ready();
     return () => {
       cancelled = true;
     };
