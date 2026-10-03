@@ -186,6 +186,12 @@ body {
   background: #f4f2fb;
 }
 
+.downloadActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
 .downloadButton {
   padding: 14px 18px;
   border: none;
@@ -204,6 +210,10 @@ body {
 .downloadButton:disabled {
   background: #c9c4b8;
   cursor: not-allowed;
+}
+
+.svgDownloadButton {
+  background: var(--navy);
 }
 
 .previewPane {

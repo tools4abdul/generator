@@ -342,6 +342,25 @@ function SignGenerator() {
     }, "image/png");
   }, [safeGroupName, hasProfanity]);
 
+  const downloadSvg = React.useCallback(() => {
+    if (hasProfanity) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const slug = (safeGroupName.trim() || "your-group").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    // The sign is rendered with a licensed webfont and campaign artwork masks. Embedding
+    // the finished PNG inside an SVG preserves the exact on-screen design in a broadly
+    // supported .svg file, even on systems that do not have the campaign font installed.
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}" viewBox="0 0 ${canvas.width} ${canvas.height}"><image width="${canvas.width}" height="${canvas.height}" href="${canvas.toDataURL("image/png")}"/></svg>`;
+    const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${slug}-for-abdul.svg`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }, [safeGroupName, hasProfanity]);
+
   return (
     <div className="generatorApp">
       <header className="generatorHeader">
@@ -412,9 +431,14 @@ function SignGenerator() {
             </div>
           </fieldset>
 
-          <button type="button" className="downloadButton" onClick={downloadPng} disabled={hasProfanity}>
-            Download PNG
-          </button>
+          <div className="downloadActions">
+            <button type="button" className="downloadButton" onClick={downloadPng} disabled={hasProfanity}>
+              Download PNG
+            </button>
+            <button type="button" className="downloadButton svgDownloadButton" onClick={downloadSvg} disabled={hasProfanity}>
+              Download SVG
+            </button>
+          </div>
         </section>
 
         <section className="previewPane" aria-label="Preview">
