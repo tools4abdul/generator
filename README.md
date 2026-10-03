@@ -2,7 +2,7 @@
 
 Self-service "[Group] for Abdul" graphic generator for the Abdul El-Sayed for
 U.S. Senate campaign. Type a group name, pick a color scheme and a format,
-download a PNG. Fully client-side — nothing typed is ever sent anywhere.
+download a PNG or SVG. Fully client-side — nothing typed is ever sent anywhere.
 
 Deployed at [tools4abdul.com/generator](https://tools4abdul.com/generator).
 The build here is checked out and built as part of the `tools4abdul/cliposition`
