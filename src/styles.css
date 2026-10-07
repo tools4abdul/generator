@@ -90,13 +90,14 @@ body {
 }
 
 .field legend {
-  padding: 0;
+  padding: 0 0 12px;
+  float: none;
   font-weight: 700;
   font-size: 13px;
   color: var(--navy);
 }
 
-.field span:first-child {
+.field > span:first-child {
   font-weight: 700;
   font-size: 13px;
   color: var(--navy);
@@ -177,8 +178,8 @@ body {
 }
 
 .formatOption span {
-  font-size: 11px;
-  color: #777;
+  font-size: 12px;
+  color: #595959;
 }
 
 .formatOption.active {
@@ -239,6 +240,21 @@ body {
   padding: 20px;
   text-align: center;
   font-size: 12px;
-  color: #888;
+  color: #595959;
   border-top: 1px solid var(--line);
+}
+
+#generator-main { flex: 1; }
+.field, .controls, .formatOption { min-width: 0; }
+.swatch { min-height: 44px; }
+:where(button, input):focus-visible { outline: 3px solid #17245b; outline-offset: 4px; }
+.swatch.active { outline-color: #17245b; }
+.swatch:focus-visible { outline: 3px dashed #17245b; outline-offset: 5px; }
+@media (max-width: 420px) {
+  .controls, .previewPane { padding: 16px; }
+  .downloadActions { grid-template-columns: 1fr; }
+}
+@media (forced-colors: active) {
+  .swatch span { forced-color-adjust: none; }
+  .swatch[aria-pressed="true"], .formatOption[aria-pressed="true"] { outline: 3px solid Highlight; }
 }

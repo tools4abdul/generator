@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { RegExpMatcher, englishDataset, englishRecommendedTransformers } from "obscenity";
 import "./styles.css";
+import { ToolHeader } from "./tool-header/ToolHeader";
 import forMaskUrl from "./assets/for-mask.png";
 import markMaskUrl from "./assets/mark-mask.png";
 
@@ -363,16 +364,18 @@ function SignGenerator() {
 
   return (
     <div className="generatorApp">
-      <header className="generatorHeader">
+      <ToolHeader current="generator" skipTo="#generator-main" />
+      <main id="generator-main" tabIndex={-1}>
+      <section className="generatorHeader">
         <p className="kicker">FREE &amp; SELF-SERVE</p>
         <h1>Make a Sign for Abdul</h1>
         <p className="lede">
           Type your group, pick a color scheme and a format, and download a "[Group] for Abdul" graphic
           in the campaign's colors — for yard signs, social posts, or print.
         </p>
-      </header>
+      </section>
 
-      <main className="generatorLayout">
+      <div className="generatorLayout">
         <section className="controls" aria-label="Sign options">
           <label className="field">
             <span>Group name</span>
@@ -382,12 +385,12 @@ function SignGenerator() {
               onChange={(event) => setGroupName(event.target.value)}
               placeholder="e.g. Van Buren County"
               maxLength={60}
-              autoFocus
               aria-invalid={hasProfanity}
+              aria-describedby={hasProfanity ? "group-name-error" : undefined}
               className={hasProfanity ? "invalid" : undefined}
             />
             {hasProfanity && (
-              <span className="fieldError" role="alert">
+              <span className="fieldError" id="group-name-error" role="alert">
                 Please choose an appropriate group name.
               </span>
             )}
@@ -442,8 +445,9 @@ function SignGenerator() {
         </section>
 
         <section className="previewPane" aria-label="Preview">
-          <canvas ref={canvasRef} className="previewCanvas" style={{ aspectRatio: `${format.width} / ${format.height}` }} />
+          <canvas ref={canvasRef} role="img" aria-label={`${safeGroupName.trim() || "Your group"} for Abdul sign, ${scheme.label}, ${format.label}`} className="previewCanvas" style={{ aspectRatio: `${format.width} / ${format.height}` }} />
         </section>
+      </div>
       </main>
 
       <footer className="generatorFooter">
