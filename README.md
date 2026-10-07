@@ -17,3 +17,13 @@ npm run dev
 npm run build
 npm run check
 ```
+
+## Shared tool header
+
+The five Tools for Abdul applications use the canonical component and styles from
+`tools4abdul/cliposition/shared/tool-header/`. This project's versioned copy is in
+`src/tool-header/` so standalone builds need no runtime fetch or extra package.
+From the canonical checkout run `node scripts/sync-tool-header.mjs <this-checkout>`
+to update the copy; commit and rebuild it with the app. The logo returns to Positions;
+explicit links lead to the campaign, voting information, volunteering, and volunteer
+Slack. Arabic is not published in this release.
